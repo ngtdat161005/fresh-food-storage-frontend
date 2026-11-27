@@ -1,65 +1,61 @@
-# Kho Tươi — frontend React + MUI
+# Kho Tươi: frontend giám sát và điều khiển kho lạnh
 
-Frontend cho ứng dụng quản lý thiết bị trong phòng bảo quản thực phẩm tươi sống. Dự án có danh sách phòng, số đo nhiệt độ và độ ẩm, cảnh báo, danh sách thiết bị điều khiển và trang đăng nhập. Mã giao diện được tách thành `components`, `pages`, `hooks`, `services`, `data` theo cách tổ chức React/MUI tham khảo từ dự án Trello.
+Frontend của đồ án đa ngành (hướng Hệ thống thông tin): ứng dụng web giám sát phòng bảo quản thực phẩm tươi sống và điều khiển thiết bị IoT (quạt, máy nén) qua backend FastAPI và Adafruit IO.
 
-## Chạy dự án
+## Chức năng
 
-```powershell
-cd D:\FreshFoodStorageFrontend
+- Danh sách phòng kho; chọn phòng để xem chi tiết.
+- Nhiệt độ, độ ẩm mới nhất và biểu đồ diễn biến, kèm giới hạn nếu backend trả về.
+- Cảnh báo đang mở của phòng, lấy từ backend. Frontend không tự tính cảnh báo.
+- Bật, tắt quạt và máy nén. Lệnh cần xác nhận trước khi gửi; trạng thái trên màn hình chỉ đổi khi backend báo thiết bị đã đổi, quá 15 giây không có xác nhận thì báo lỗi.
+- Trạng thái thiết bị được cập nhật mỗi 5 giây, nên thay đổi từ Adafruit hoặc từ bo mạch cũng hiện lên ứng dụng.
+- Báo khi số đo đã cũ (2 phút không có bản ghi mới) hoặc khi mất kết nối tới backend.
+- Giao diện đăng nhập (chưa nối xác thực).
+
+Luồng demo giữa kỳ: bật/tắt thiết bị → trạng thái đổi trên Adafruit IO → trạng thái đổi trên ứng dụng, và chiều ngược lại từ ứng dụng.
+
+## Công nghệ
+
+React 18, Material UI 5, Vite 4.
+
+## Chạy
+
+```bash
 npm install
 npm run dev
 ```
 
-- `/`: giao diện theo dõi phòng kho.
-- `/login`: giao diện đăng nhập.
+Mở `http://localhost:5173` (trang giám sát) hoặc `/login` (đăng nhập).
 
-Chạy `npm run build` để kiểm tra bản build. Khi chưa có cấu hình backend, trang tổng quan dùng dữ liệu mẫu trong `src/data/sampleData.js` để nhóm xem và hoàn thiện UI. Dữ liệu mẫu **không phải số đo từ thiết bị thật**.
+Không cấu hình gì thì ứng dụng chạy bằng **dữ liệu mẫu** trong `src/data/sampleData.js`. Ở chế độ này các nút điều khiển bị khóa vì không có thiết bị thật.
 
-Để xem cảnh báo, mở trang `/`: phòng rau củ `P-02` được chọn sẵn và có một cảnh báo nhiệt độ. Chọn phòng hải sản `P-03` để xem cảnh báo độ ẩm. Các cảnh báo này là bản ghi mẫu trong `src/data/sampleData.js`, không phải kết quả frontend tự tính từ ngưỡng. Khi dùng API, chỉ danh sách cảnh báo do backend trả về mới tạo cảnh báo đỏ trên giao diện.
+Để nối backend, tạo file `.env.local` theo `.env.example`:
 
-Phần "Thiết bị điều khiển" có quạt và máy nén cùng nút Bật/Tắt. Trong chế độ dữ liệu mẫu, nút bị khóa vì không có thiết bị thật. Khi nối API, người dùng xác nhận lệnh, giao diện gửi lệnh tới backend rồi chờ trạng thái thiết bị được backend xác nhận; không đổi trạng thái nút theo suy đoán. Video thiết bị thật vẫn cần backend, Adafruit IO và phần cứng hoạt động.
+```bash
+VITE_API_BASE_URL=http://localhost:8000
+# Tùy chọn, khi backend có WebSocket
+VITE_WS_URL=
+```
 
-## Hợp đồng API cần thống nhất với backend
+## Cấu trúc
 
-Tài liệu backend xác nhận đường dẫn `GET /storage-rooms/{roomId}/readings`, luồng WebSocket, command-service và rule engine. Tài liệu **chưa chốt URL hoặc schema** của API danh sách phòng, thiết bị, cảnh báo và lệnh điều khiển. Các đường dẫn dưới đây trong `src/services/storageApi.js` là **đề xuất để bàn giao**, cần sửa theo OpenAPI thật trước khi quay video thiết bị:
+```
+src/
+  App.jsx                       trang giám sát và điều khiển
+  pages/LoginPage.jsx           trang đăng nhập
+  components/ReadingChart.jsx   biểu đồ số đo
+  hooks/useStorageDashboard.js  tải và cập nhật dữ liệu phòng, thiết bị, cảnh báo
+  services/storageApi.js        gọi API phòng, thiết bị, cảnh báo, lệnh điều khiển
+  services/roomApi.js           gọi API số đo
+  data/sampleData.js            dữ liệu mẫu
+```
 
-| Mục đích | Đường dẫn đang đặt trong adapter | Dữ liệu frontend cần |
-| --- | --- | --- |
-| Danh sách phòng | `GET /storage-rooms` | `id`, `name`, `warehouse`, `product`, giới hạn nhiệt độ/độ ẩm nếu có |
-| Thiết bị của phòng | `GET /storage-rooms/{roomId}/devices` | `id`, `name`, `kind`, `online`, `powerState`, `controllable` |
-| Cảnh báo đang mở | `GET /storage-rooms/{roomId}/alerts?status=open` | `id`, `message`, `status`, `severity` |
-| Điều khiển | `POST /devices/{deviceId}/commands` với `{ "command": "TURN_ON" }` hoặc `TURN_OFF` | Chấp nhận/từ chối lệnh; trạng thái thực được xác nhận qua API thiết bị hoặc WebSocket |
-| Số đo | `GET /storage-rooms/{roomId}/readings` | Bản ghi cảm biến theo phòng, có thời gian, giá trị, đơn vị, thiết bị |
+## Tích hợp với backend
 
-`src/hooks/useStorageDashboard.js` lấy lịch sử lần đầu, nhận số đo mới qua WebSocket nếu được cấu hình. Khi WebSocket chưa mở, hook kiểm tra số đo mỗi 60 giây với `?start=<thời gian bản ghi cuối>` rồi gộp theo ID. Backend cần xác nhận bộ lọc `start` của endpoint phòng; nếu không hỗ trợ thì sửa adapter theo API truy vấn tăng dần thực tế. Danh sách thiết bị được hỏi lại mỗi 5 giây kể cả khi WebSocket đang mở, để thấy thay đổi từ Adafruit hoặc bo mạch; request chồng nhau được gộp, và bộ đếm dừng khi đổi phòng. Cảnh báo được tải riêng mỗi 30 giây. Màn hình đánh dấu số đo cũ sau 2 phút không có bản ghi mới và báo lỗi khi API số đo không truy cập được. Mốc 2 phút là quy tắc hiển thị của frontend, không thay cho rule mất tín hiệu của backend.
+Đường dẫn `GET /storage-rooms/{roomId}/readings` lấy theo tài liệu backend. Các đường dẫn còn lại (danh sách phòng, thiết bị, cảnh báo, lệnh điều khiển) là **đề xuất**, đặt trong `src/services/storageApi.js` và cần sửa theo API thật. Tên trường được chuẩn hóa trong các hàm `normalize...` cùng file.
 
-Tệp `BACKEND_HANDOFF.md` là danh sách thông tin backend cần xác nhận trước khi nối thiết bị thật và quay video giữa kỳ.
+Những thông tin frontend cần từ nhóm backend được liệt kê trong [`BACKEND_HANDOFF.md`](BACKEND_HANDOFF.md).
 
-Ngưỡng **không lấy từ `.env`**. Giới hạn chỉ hiển thị nếu API danh sách phòng trả về; frontend không dùng giới hạn để tạo cảnh báo. Nếu API cảnh báo lỗi, màn hình báo rằng trạng thái an toàn chưa xác định.
+## Chưa làm
 
-`.env.example` chỉ giữ URL API và WebSocket. Sao chép thành `.env.local` khi đã có API thật. Không đặt mật khẩu hay API key Adafruit vào biến `VITE_` vì chúng được đưa vào mã chạy trên trình duyệt.
-
-Trang đăng nhập mới có UI; **chưa có xác thực và chưa chặn truy cập trang tổng quan**. Backend cần cung cấp endpoint, định dạng request/response, phiên và phân quyền. Lệnh điều khiển phải được backend kiểm tra quyền, ca làm và trạng thái thiết bị theo command-service.
-
-### Dữ liệu số đo mà adapter đang chấp nhận
-
-API có thể trả mảng trực tiếp hoặc mảng trong `data`, `readings`, `items`, `results`. Adapter nhận các tên trường sau:
-
-| Ý nghĩa | Tên trường |
-| --- | --- |
-| Giá trị số | `value`, `gia_tri`, `thong_so`, `gia_tri_thong_so` |
-| Thời gian ISO 8601 | `recordedAt`, `thoi_gian_ghi`, `timestamp`, `created_at` |
-| Mã thiết bị | `deviceId`, `device_id`, `ma_thiet_bi` |
-| Tên thiết bị | `deviceName`, `ten_thiet_bi` |
-| Đơn vị | `unit`, `don_vi_do` |
-| Loại số đo | `kind`, `metric`, `sensorType`, `loai_cam_bien`, `ten_thong_so`; hoặc nhận biết độ ẩm từ tên thiết bị/đơn vị `%` |
-
-Nếu OpenAPI thực tế khác, chỉnh các hàm chuẩn hóa trong `src/services/roomApi.js` và `src/services/storageApi.js`. Biểu đồ chọn cảm biến có bản ghi mới nhất cho mỗi loại số đo.
-
-## Phạm vi còn chờ backend
-
-Tích hợp API thật, xác nhận lệnh trên phần cứng, xử lý cảnh báo, lịch trình, cấu hình rule, người dùng và phân quyền, nhật ký, báo cáo và xuất file. Các nút điều khiển trong chế độ dữ liệu mẫu không gửi lệnh giả.
-
-## Ghi chú UI/UX
-
-Trên điện thoại, bản ghi hiển thị dạng thẻ thay cho bảng bị ép cột. Biểu đồ cuộn ngang bên trong thẻ để giữ chữ đọc được. Cảnh báo nghiệp vụ chỉ có một vùng màu đỏ ở đầu nội dung phòng; số đo thường dùng màu chữ trung tính. Từ Trello, dự án tham khảo cách dùng Vite/React, MUI theme và tách thành phần; giao diện kho được thiết kế riêng.
+Xác thực và phân quyền; xử lý cảnh báo; lịch trình; cấu hình ngưỡng và kịch bản; người dùng; nhật ký; báo cáo.

@@ -18,3 +18,17 @@ Các đường dẫn đang đặt trong `src/services/storageApi.js` chỉ là *
 Frontend hiện hỏi lại danh sách thiết bị mỗi 5 giây dù có WebSocket. Để kiểm tra luồng đầu tiên, hãy đổi quạt trên Adafruit hoặc bo mạch và xác nhận API thiết bị đổi `powerState` trong thời gian mong đợi. Để kiểm tra chiều ngược lại, gửi lệnh từ frontend và xác nhận thiết bị thật đổi trạng thái, sau đó API trả trạng thái mới. Cần dùng tài khoản/quyền/ca làm hợp lệ nếu command-service có kiểm tra.
 
 Khi có hợp đồng API thật, frontend sẽ sửa adapter, nối đăng nhập nếu cần, rồi thử lại cả hai chiều trên phần cứng. Không đặt token hoặc khóa Adafruit trong biến `VITE_`.
+
+## Trả lời từ backend (28/11/2026)
+
+Chi tiết và JSON mẫu: README của repo backend, mục endpoint; Swagger tại `http://127.0.0.1:8000/docs`. Mọi route có tiền tố `/api`.
+
+| Câu hỏi | Trả lời |
+| --- | --- |
+| Danh sách phòng | `GET /api/storage-rooms` trả mảng `{ma_phong_kho, ten_phong_kho, ma_nha_kho, ten_nha_kho, so_luong_thiet_bi, so_luong_thiet_bi_dang_hoat_dong}`. Không có giới hạn nhiệt độ/độ ẩm ở đây. |
+| Ngưỡng | Theo từng cảm biến, trong `GET /api/storage-rooms/{id}/readings` → `thiet_bi[].nguong[]` (`gioi_han_duoi`, `gioi_han_tren`). Số đo trong `thiet_bi[].ban_ghi[]`, 24 giờ gần nhất, thời gian UTC. |
+| Thiết bị của phòng | `GET /api/storage-rooms/{id}/devices` trả `{ma_thiet_bi, ten_thiet_bi, ten_phan_loai, don_vi_do, trang_thai_hoat_dong}`. `don_vi_do` khác null là cảm biến, null là thiết bị điều khiển. `trang_thai_hoat_dong` (`HOAT_DONG`, `MAT_KET_NOI`, `NGUNG_SU_DUNG`) là trạng thái kết nối, **chưa có** trạng thái bật/tắt. |
+| Lệnh điều khiển, trạng thái sau lệnh | Chưa có (nhiệm vụ 10). Hướng dự kiến: backend gửi lệnh qua Adafruit, thiết bị phản hồi qua feed `phan-hoi`, backend cập nhật trạng thái bật/tắt và phát sự kiện WebSocket. |
+| Cảnh báo đang mở | Chưa có endpoint. |
+| Thời gian thực | `WS /api/ws/storage-rooms/{id}?user_id=`, mỗi điểm mới gửi `{"event": "telemetry.created", "data": {ma_thiet_bi, feed_key, gia_tri_thong_so, thoi_gian_ghi}}`. |
+| Xác thực | Tạm thời: header `X-User-Id` (REST), `?user_id=` (WebSocket); không dùng cookie. Sẽ thay bằng JWT `Authorization: Bearer` (nhiệm vụ 6). CORS cho phép `http://localhost:5173`. |

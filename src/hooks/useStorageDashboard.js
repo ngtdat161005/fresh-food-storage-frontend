@@ -1,13 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchRoomReadings, normalizeReading } from '../services/roomApi.js'
+import { devUserId } from '../services/devAuth.js'
+import { fetchRoomReadings, normalizeReading, readingKind } from '../services/roomApi.js'
 import { fetchRoomAlerts, fetchRoomDevices, fetchRooms } from '../services/storageApi.js'
 
+const WINDOW_MS = 24 * 60 * 60 * 1000
+
+// Gộp số đo mới, bỏ điểm trùng và điểm cũ hơn 24 giờ (khớp khung dashboard của backend).
 function mergeReadings(current, incoming) {
   const byId = new Map(current.map((item) => [item.id, item]))
   incoming.forEach((item) => byId.set(item.id, item))
+  const cutoff = Date.now() - WINDOW_MS
   return [...byId.values()]
+    .filter((item) => Date.parse(item.recordedAt) >= cutoff)
     .sort((a, b) => Date.parse(a.recordedAt) - Date.parse(b.recordedAt))
-    .slice(-300)
+}
+
+// Ngưỡng của phòng lấy từ rule đầu tiên có đủ cận trên và cận dưới của cảm biến cùng loại.
+function roomLimits(sensors) {
+  const limits = {}
+  for (const sensor of sensors) {
+    const kind = readingKind(sensor.unit, sensor.deviceName)
+    const rule = sensor.limits.find((item) => item.gioi_han_duoi != null && item.gioi_han_tren != null)
+    if (rule && !limits[kind]) limits[kind] = { min: Number(rule.gioi_han_duoi), max: Number(rule.gioi_han_tren) }
+  }
+  return {
+    ...(limits.temperature && { minTemp: limits.temperature.min, maxTemp: limits.temperature.max }),
+    ...(limits.humidity && { minHumidity: limits.humidity.min, maxHumidity: limits.humidity.max }),
+  }
+}
+
+// VITE_WS_URL có dạng ws://.../storage-rooms/{room_id}; thêm user_id tạm thời khi chưa có đăng nhập.
+function roomSocketUrl(template, roomId) {
+  const url = template.replace('{room_id}', encodeURIComponent(roomId))
+  if (!devUserId) return url
+  return `${url}${url.includes('?') ? '&' : '?'}user_id=${encodeURIComponent(devUserId)}`
 }
 
 export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
@@ -66,6 +92,7 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
     let socket = null
     let readingCursor = null
     let socketOpen = false
+    let sensors = new Map()
     const controller = new AbortController()
     setDataRoomId(roomId)
     setReadings([])
@@ -78,8 +105,11 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
 
     async function loadReadings(incremental = false) {
       try {
-        const next = await fetchRoomReadings({ baseUrl, roomId }, controller.signal, incremental ? readingCursor : null)
+        const { readings: next, sensors: info } = await fetchRoomReadings({ baseUrl, roomId }, controller.signal, incremental ? readingCursor : null)
         if (!active) return
+        sensors = new Map(info.map((sensor) => [sensor.deviceId, sensor]))
+        const limits = roomLimits(info)
+        setRooms((current) => current.map((room) => room.id === String(roomId) ? { ...room, ...limits } : room))
         setReadings((current) => incremental ? mergeReadings(current, next) : next)
         if (next.length) readingCursor = next.at(-1).recordedAt
         setReadingsError('')
@@ -110,7 +140,7 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
 
     if (wsUrl) {
       try {
-        socket = new WebSocket(wsUrl)
+        socket = new WebSocket(roomSocketUrl(wsUrl, roomId))
         socket.onopen = () => { socketOpen = true; if (active) setConnection('live') }
         socket.onclose = () => { socketOpen = false; if (active) setConnection('polling') }
         socket.onerror = () => { socketOpen = false; if (active) setConnection('polling') }
@@ -122,7 +152,10 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
             const eventType = String(message.type ?? message.event ?? '').toLowerCase()
             if (eventType.includes('alert') || eventType.includes('canh_bao')) loadAlerts()
             if (eventType.includes('device') || eventType.includes('thiet_bi')) loadDevices()
-            const point = normalizeReading(message.reading ?? message.data ?? message)
+            const raw = message.reading ?? message.data ?? message
+            const info = sensors.get(String(raw?.ma_thiet_bi ?? raw?.deviceId ?? ''))
+            if (sensors.size && !info) return
+            const point = normalizeReading(info ? { ten_thiet_bi: info.deviceName, don_vi_do: info.unit, ...raw } : raw)
             if (!point || !active) return
             setReadings((current) => mergeReadings(current, [point]))
             readingCursor = point.recordedAt

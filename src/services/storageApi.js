@@ -52,6 +52,8 @@ export function normalizeRoom(raw) {
     maxTemp: optionalNumber(raw.maxTemp ?? temperature.max),
     minHumidity: optionalNumber(raw.minHumidity ?? humidity.min),
     maxHumidity: optionalNumber(raw.maxHumidity ?? humidity.max),
+    deviceCount: optionalNumber(raw.deviceCount ?? raw.so_luong_thiet_bi),
+    activeDeviceCount: optionalNumber(raw.activeDeviceCount ?? raw.so_luong_thiet_bi_dang_hoat_dong),
   }
 }
 
@@ -64,10 +66,16 @@ export function normalizeDevice(raw) {
   const powerText = String(rawPower).toUpperCase()
   const powerState = rawPower === true || ['ON', 'BAT', 'BẬT'].includes(powerText) ? 'on'
     : rawPower === false || ['OFF', 'TAT', 'TẮT'].includes(powerText) ? 'off' : 'unknown'
+  const unit = raw.unit ?? raw.don_vi_do ?? null
   return {
     id: String(raw.id ?? raw.deviceId ?? raw.ma_thiet_bi),
     name: raw.name ?? raw.ten_thiet_bi ?? 'Thiết bị',
     kind,
+    type: raw.type ?? raw.ten_phan_loai ?? null,
+    unit,
+    // Backend: có đơn vị đo là cảm biến, không có là thiết bị điều khiển.
+    isSensor: unit != null && unit !== '',
+    status: status || null,
     online,
     powerState,
     controllable: raw.controllable ?? raw.co_the_dieu_khien ?? (kind === 'fan' || kind === 'compressor'),

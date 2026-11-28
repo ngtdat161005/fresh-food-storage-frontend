@@ -87,5 +87,6 @@ export async function fetchRoomReadings({ baseUrl, roomId }, signal, start) {
     throw new Error(`API trả về HTTP ${response.status}. Kiểm tra mã phòng, quyền truy cập và cấu hình CORS.`)
   }
   const payload = await response.json()
-  return { readings: normalizeReadings(payload), sensors: sensorInfo(payload) }
+  const room = { location: payload?.vi_tri_phong_kho ?? null, description: payload?.thong_tin_phong_kho ?? null }
+  return { readings: normalizeReadings(payload), sensors: sensorInfo(payload), room }
 }

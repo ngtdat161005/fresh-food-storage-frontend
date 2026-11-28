@@ -45,6 +45,8 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
   const [devicesError, setDevicesError] = useState('')
   const [alerts, setAlerts] = useState([])
   const [alertsError, setAlertsError] = useState('')
+  const [sensors, setSensors] = useState([])
+  const [roomDetail, setRoomDetail] = useState(null)
   const [connection, setConnection] = useState('idle')
   const [dataRoomId, setDataRoomId] = useState('')
   const currentRoomIdRef = useRef(roomId)
@@ -96,6 +98,8 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
     const controller = new AbortController()
     setDataRoomId(roomId)
     setReadings([])
+    setSensors([])
+    setRoomDetail(null)
     setDevices([])
     setAlerts([])
     setReadingsError('')
@@ -105,9 +109,11 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
 
     async function loadReadings(incremental = false) {
       try {
-        const { readings: next, sensors: info } = await fetchRoomReadings({ baseUrl, roomId }, controller.signal, incremental ? readingCursor : null)
+        const { readings: next, sensors: info, room } = await fetchRoomReadings({ baseUrl, roomId }, controller.signal, incremental ? readingCursor : null)
         if (!active) return
         sensors = new Map(info.map((sensor) => [sensor.deviceId, sensor]))
+        setSensors(info)
+        setRoomDetail(room)
         const limits = roomLimits(info)
         setRooms((current) => current.map((room) => room.id === String(roomId) ? { ...room, ...limits } : room))
         setReadings((current) => incremental ? mergeReadings(current, next) : next)
@@ -187,7 +193,7 @@ export default function useStorageDashboard(baseUrl, roomId, wsUrl) {
   }, [baseUrl, roomId, wsUrl, refreshDevices])
 
   return {
-    rooms, roomsError, dataRoomId, readings, readingsError, devices, devicesError,
+    rooms, roomsError, dataRoomId, readings, readingsError, sensors, roomDetail, devices, devicesError,
     alerts, alertsError, connection, refreshDevices,
   }
 }

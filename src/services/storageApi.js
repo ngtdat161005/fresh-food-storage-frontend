@@ -1,5 +1,7 @@
-// Các đường dẫn ngoài readings là hợp đồng đề xuất để nhóm backend đối chiếu.
-// Sửa tại đây khi OpenAPI chính thức được bàn giao.
+import { authHeaders } from './devAuth.js'
+
+// rooms, devices: đã khớp backend (/api/storage-rooms...).
+// alerts, command: backend chưa có (nhiệm vụ cảnh báo và nhiệm vụ 10), hiện trả 404.
 const paths = {
   rooms: '/storage-rooms',
   devices: (roomId) => `/storage-rooms/${encodeURIComponent(roomId)}/devices`,
@@ -27,9 +29,8 @@ function optionalNumber(value) {
 
 async function requestJson(baseUrl, path, options = {}) {
   const response = await fetch(`${baseUrl.replace(/\/+$/, '')}${path}`, {
-    credentials: 'include',
     ...options,
-    headers: { Accept: 'application/json', ...options.headers },
+    headers: { Accept: 'application/json', ...authHeaders(), ...options.headers },
   })
   if (!response.ok) throw new Error(`Không tải được dữ liệu (${response.status}).`)
   if (response.status === 204) return null
@@ -43,19 +44,21 @@ export function normalizeRoom(raw) {
   const temperature = limits.temperature ?? {}
   const humidity = limits.humidity ?? {}
   return {
-    id: String(raw.id ?? raw.roomId ?? raw.ma_phong),
-    name: raw.name ?? raw.ten_phong ?? 'Phòng kho',
+    id: String(raw.id ?? raw.roomId ?? raw.ma_phong_kho ?? raw.ma_phong),
+    name: raw.name ?? raw.ten_phong_kho ?? raw.ten_phong ?? 'Phòng kho',
     warehouse: raw.warehouseName ?? raw.ten_nha_kho ?? (typeof raw.warehouse === 'string' ? raw.warehouse : raw.warehouse?.name) ?? 'Nhà kho',
     product: raw.product ?? raw.loai_thuc_pham ?? 'Thực phẩm tươi sống',
     minTemp: optionalNumber(raw.minTemp ?? temperature.min),
     maxTemp: optionalNumber(raw.maxTemp ?? temperature.max),
     minHumidity: optionalNumber(raw.minHumidity ?? humidity.min),
     maxHumidity: optionalNumber(raw.maxHumidity ?? humidity.max),
+    deviceCount: optionalNumber(raw.deviceCount ?? raw.so_luong_thiet_bi),
+    activeDeviceCount: optionalNumber(raw.activeDeviceCount ?? raw.so_luong_thiet_bi_dang_hoat_dong),
   }
 }
 
 export function normalizeDevice(raw) {
-  const kindText = String(raw.kind ?? raw.type ?? raw.ten_loai_thiet_bi ?? raw.deviceType ?? raw.name ?? raw.ten_thiet_bi ?? '')
+  const kindText = String(raw.kind ?? raw.type ?? raw.ten_phan_loai ?? raw.ten_loai_thiet_bi ?? raw.deviceType ?? raw.name ?? raw.ten_thiet_bi ?? '')
   const kind = /quạt|fan/i.test(kindText) ? 'fan' : /máy nén|compressor/i.test(kindText) ? 'compressor' : 'other'
   const status = String(raw.status ?? raw.trang_thai_hoat_dong ?? '').toUpperCase()
   const online = raw.online === true || ['ONLINE', 'HOAT_DONG', 'ACTIVE'].includes(status)
@@ -63,10 +66,16 @@ export function normalizeDevice(raw) {
   const powerText = String(rawPower).toUpperCase()
   const powerState = rawPower === true || ['ON', 'BAT', 'BẬT'].includes(powerText) ? 'on'
     : rawPower === false || ['OFF', 'TAT', 'TẮT'].includes(powerText) ? 'off' : 'unknown'
+  const unit = raw.unit ?? raw.don_vi_do ?? null
   return {
     id: String(raw.id ?? raw.deviceId ?? raw.ma_thiet_bi),
     name: raw.name ?? raw.ten_thiet_bi ?? 'Thiết bị',
     kind,
+    type: raw.type ?? raw.ten_phan_loai ?? null,
+    unit,
+    // Backend: có đơn vị đo là cảm biến, không có là thiết bị điều khiển.
+    isSensor: unit != null && unit !== '',
+    status: status || null,
     online,
     powerState,
     controllable: raw.controllable ?? raw.co_the_dieu_khien ?? (kind === 'fan' || kind === 'compressor'),

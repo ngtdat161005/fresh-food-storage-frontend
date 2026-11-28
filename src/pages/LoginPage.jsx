@@ -27,9 +27,9 @@ export default function LoginPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(460px, 0.95fr)' } }}>
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', justifyContent: 'space-between', p: { md: 5, xl: 7 }, background: 'radial-gradient(circle at 35% 20%, rgba(100,217,192,0.19), transparent 38%), linear-gradient(145deg, #0D2630, #0B1524 72%)', borderRight: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', justifyContent: 'space-between', p: { md: 5, xl: 7 }, background: 'linear-gradient(145deg, #E8F1FB, #F7FAFD 72%)', borderRight: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.4 }}>
-          <Box sx={{ width: 44, height: 44, display: 'grid', placeItems: 'center', bgcolor: 'primary.main', color: '#08232B', borderRadius: 2.5 }}><AcUnitOutlinedIcon /></Box>
+          <Box sx={{ width: 44, height: 44, display: 'grid', placeItems: 'center', bgcolor: 'primary.main', color: '#FFFFFF', borderRadius: 2.5 }}><AcUnitOutlinedIcon /></Box>
           <Box><Typography sx={{ fontWeight: 800, letterSpacing: '-0.025em' }}>KHO TƯƠI</Typography><Typography variant="caption" color="text.secondary">Giám sát bảo quản</Typography></Box>
         </Box>
         <Box sx={{ maxWidth: 550, mb: 6 }}>
@@ -50,7 +50,7 @@ export default function LoginPage() {
           <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.2, mb: 5 }}><AcUnitOutlinedIcon color="primary" /><Typography sx={{ fontWeight: 800 }}>KHO TƯƠI</Typography></Box>
           <Card sx={{ bgcolor: 'background.paper' }}>
             <CardContent sx={{ p: { xs: 3, sm: 4 }, '&:last-child': { pb: { xs: 3, sm: 4 } } }}>
-              <Box sx={{ width: 48, height: 48, display: 'grid', placeItems: 'center', bgcolor: 'rgba(100,217,192,0.12)', color: 'primary.main', borderRadius: 2, mb: 3 }}><LockOutlinedIcon /></Box>
+              <Box sx={{ width: 48, height: 48, display: 'grid', placeItems: 'center', bgcolor: '#E3EEFA', color: 'primary.main', borderRadius: 2, mb: 3 }}><LockOutlinedIcon /></Box>
               <Typography variant="h4" sx={{ fontSize: 31 }}>Đăng nhập</Typography>
               <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>Sử dụng tài khoản được cấp để truy cập hệ thống.</Typography>
               {message && <Alert severity="info" sx={{ mb: 2 }}>{message}</Alert>}

@@ -1,37 +1,45 @@
 import { createTheme } from '@mui/material/styles'
 
+// Nền trang trắng; header và thanh bên dùng xanh nhạt (shell) để tách khỏi vùng nội dung.
+export const shell = {
+  sidebar: '#b5d6fc',
+  header: '#F1F7FD',
+  border: '#D3E2F1',
+  selected: '#fafafa',
+}
+
 const theme = createTheme({
   palette: {
-    mode: 'dark',
-    primary: { main: '#64D9C0' },
-    secondary: { main: '#91A8C3' },
-    background: { default: '#0B1524', paper: '#132235' },
-    text: { primary: '#F4F8FC', secondary: '#A9BDCF' },
-    success: { main: '#64D9C0' },
-    warning: { main: '#F6C66B' },
-    error: { main: '#FF8F89' },
-    divider: 'rgba(192, 215, 233, 0.13)',
+    mode: 'light',
+    primary: { main: '#2681e9' },
+    secondary: { main: '#5B7A99' },
+    background: { default: '#7ca9fe', paper: '#FFFFFF' },
+    text: { primary: '#10263D', secondary: '#55697E' },
+    success: { main: '#2E7D32' },
+    warning: { main: '#B26A00' },
+    error: { main: '#C62828' },
+    divider: '#c0ddfb',
   },
-  shape: { borderRadius: 16 },
+  shape: { borderRadius: 12 },
   typography: {
     fontFamily: '"Segoe UI", Roboto, Arial, sans-serif',
-    h4: { fontWeight: 750, letterSpacing: '-0.035em' },
-    h5: { fontWeight: 740, letterSpacing: '-0.025em' },
+    h4: { fontWeight: 750, letterSpacing: '-0.03em' },
+    h5: { fontWeight: 740, letterSpacing: '-0.02em' },
     h6: { fontWeight: 700 },
     button: { textTransform: 'none', fontWeight: 700 },
   },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 10, minHeight: 42 },
+        root: { borderRadius: 10, minHeight: 40 },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          border: '1px solid rgba(192, 215, 233, 0.13)',
+          border: '1px solid #DDE6EF',
           backgroundImage: 'none',
-          boxShadow: '0 18px 48px rgba(0, 0, 0, 0.12)',
+          boxShadow: '0 1px 3px rgba(16, 38, 61, 0.06)',
         },
       },
     },
@@ -40,10 +48,15 @@ const theme = createTheme({
         root: { fontWeight: 700 },
       },
     },
+    MuiTableCell: {
+      styleOverrides: {
+        head: { fontWeight: 700, color: '#55697E' },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         body: { minWidth: 320 },
-        '*:focus-visible': { outline: '2px solid #89E7D3', outlineOffset: 3 },
+        '*:focus-visible': { outline: '2px solid #1565C0', outlineOffset: 3 },
         '@media (prefers-reduced-motion: reduce)': {
           '*': { scrollBehavior: 'auto !important', transitionDuration: '0.01ms !important' },
         },
